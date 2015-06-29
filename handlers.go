@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
@@ -110,7 +109,35 @@ func TodoCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func TodoShow(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	todoId := vars["todoId"]
-	fmt.Fprintln(w, "Todo show:", todoId)
+	if r.Method != "GET" {
+		log.Printf("NOT GET")
+		http.Error(w, http.StatusText(405), 405)
+		return
+	}
+
+	id := r.FormValue("id")
+	if id == "" {
+		log.Printf("Bad ID")
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+
+	row := db.QueryRow("SELECT * FROM todos WHERE Id = $1", id)
+
+	todo := new(Todo)
+	err := row.Scan(&todo.Id, &todo.Name, &todo.Completed)
+	if err == sql.ErrNoRows {
+		http.NotFound(w, r)
+		return
+	} else if err != nil {
+		http.Error(w, http.StatusText(500), 500)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(todo); err != nil {
+		log.Printf("Error printing todos")
+		panic(err)
+	}
 }
