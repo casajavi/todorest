@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 
 	_ "github.com/lib/pq"
+	"github.com/russross/blackfriday"
 )
 
 var db *sql.DB
@@ -26,7 +28,15 @@ func init() {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Welcome!")
+
+	input, err := ioutil.ReadFile("README.md")
+	if err != nil {
+		log.Printf("Error Reading File")
+		panic(err)
+	}
+
+	output := blackfriday.MarkdownCommon(input)
+	w.Write(output)
 }
 
 func TodoIndex(w http.ResponseWriter, r *http.Request) {
